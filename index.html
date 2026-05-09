@@ -2,111 +2,65 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Chat | Supabase</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>ChatApp | Ücretsiz & Sınırsız</title>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
-        :root {
-            --bg-main: #313338;
-            --bg-sidebar: #2b2d31;
-            --bg-servers: #1e1f22;
-            --accent: #5865f2;
-            --text-main: #dbdee1;
-            --text-muted: #949ba4;
-        }
-
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        :root { --bg: #313338; --sidebar: #2b2d31; --accent: #5865f2; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; height: 100vh; display: flex; }
         
-        /* Discord Tasarım Çizgileri */
-        .servers { width: 72px; background: var(--bg-servers); display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 10px; }
-        .server-circle { width: 48px; height: 48px; background: var(--bg-main); border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .server-circle:hover { border-radius: 15px; background: var(--accent); color: white; }
+        .sidebar { width: 240px; background: var(--sidebar); padding: 20px; display: flex; flex-direction: column; }
+        .chat { flex: 1; display: flex; flex-direction: column; }
+        
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { background: #383a40; padding: 10px; border-radius: 8px; width: fit-content; }
+        .user { color: var(--accent); font-weight: bold; font-size: 12px; }
 
-        .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; padding: 15px; }
-        .channel { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); margin-bottom: 5px; }
-        .channel:hover, .active-ch { background: #3f4147; color: white; }
-
-        .chat { flex: 1; display: flex; flex-direction: column; position: relative; }
-        .header { height: 50px; border-bottom: 1px solid #26272b; display: flex; align-items: center; padding: 0 20px; font-weight: bold; }
-
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .msg-box { display: flex; flex-direction: column; border-bottom: 1px solid #3f4147; padding-bottom: 10px; }
-        .msg-user { color: #f2f3f5; font-weight: bold; font-size: 14px; margin-bottom: 3px; }
-        .msg-content { font-size: 15px; color: var(--text-main); }
-
-        .input-box { padding: 20px; }
-        .input-wrap { background: #383a40; border-radius: 8px; padding: 10px 15px; }
-        input { width: 100%; background: transparent; border: none; color: white; outline: none; font-size: 15px; }
+        .input-area { padding: 20px; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #383a40; color: white; outline: none; }
     </style>
 </head>
 <body>
 
-<div class="servers">
-    <div class="server-circle" style="background: var(--accent); color: white;">Y</div>
-    <div class="server-circle">+</div>
-</div>
+    <div class="sidebar">
+        <h3>Discord-Clone</h3>
+        <p># genel</p>
+        <p># oyun</p>
+    </div>
 
-<div class="sidebar">
-    <h3 style="font-size: 16px;">Sohbet Kanalları</h3>
-    <div class="channel active-ch"># genel</div>
-    <div class="channel"># oyun-tayfası</div>
-    <div class="channel"># proje-kodları</div>
-</div>
-
-<div class="chat">
-    <div class="header"># genel</div>
-    <div id="messages"></div>
-    <div class="input-box">
-        <div class="input-wrap">
-            <input type="text" id="chatInput" placeholder="#genel kanalına mesaj gönder">
+    <div class="chat">
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="input" placeholder="Mesaj yaz ve Enter'a bas...">
         </div>
     </div>
-</div>
 
-<script>
-    // 1. SUPABASE AYARLARI (Kendi bilgilerini buraya gir)
-    const SUPABASE_URL = 'https://PROJE_ID.supabase.co';
-    const SUPABASE_KEY = 'EY...ANON_KEY';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    <script>
+        // Gun.js'i başlat (Ücretsiz relay sunucuları kullanılır)
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        const chat = gun.get('yavuzun-gizli-odasi-123').get('messages');
 
-    const input = document.getElementById('chatInput');
-    const msgContainer = document.getElementById('messages');
-    const myUser = "Yavuz_" + Math.floor(Math.random() * 100);
+        const input = document.getElementById('input');
+        const msgDiv = document.getElementById('messages');
+        const myUser = "Kullanıcı_" + Math.floor(Math.random() * 100);
 
-    // 2. MESAJLARI ÇEKME VE EKRANA YAZMA
-    async function fetchMessages() {
-        let { data: messages } = await supabase.from('messages').select('*').order('id', { ascending: true });
-        msgContainer.innerHTML = '';
-        messages.forEach(m => renderMessage(m));
-    }
+        // Mesaj Gönder
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter' && input.value.trim() !== "") {
+                chat.set({ user: myUser, text: input.value, time: Date.now() });
+                input.value = "";
+            }
+        };
 
-    function renderMessage(msg) {
-        const div = document.createElement('div');
-        div.className = 'msg-box';
-        div.innerHTML = `<div class="msg-user">${msg.user}</div><div class="msg-content">${msg.text}</div>`;
-        msgContainer.appendChild(div);
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-    }
-
-    // 3. MESAJ GÖNDERME
-    input.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && input.value.trim() !== "") {
-            const val = input.value;
-            input.value = "";
-            await supabase.from('messages').insert([{ user: myUser, text: val }]);
-        }
-    });
-
-    // 4. ANLIK DİNLEME (REALTIME)
-    supabase.channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-            renderMessage(payload.new);
-        })
-        .subscribe();
-
-    // Başlangıçta eski mesajları getir
-    fetchMessages();
-</script>
-
+        // Mesajları Dinle (Anlık gelir)
+        chat.map().once((data) => {
+            if (data && data.text) {
+                const div = document.createElement('div');
+                div.className = 'msg';
+                div.innerHTML = `<div class="user">${data.user}</div><div>${data.text}</div>`;
+                msgDiv.appendChild(div);
+                msgDiv.scrollTop = msgDiv.scrollHeight;
+            }
+        });
+    </script>
 </body>
 </html>
