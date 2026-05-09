@@ -3,261 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatify | Arkadaş Grubu</title>
+    <title>Advanced Chat | Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* CSS: Discord-Esintili Koyu Tema */
         :root {
-            --bg-darker: #1e1f22;
+            --bg-main: #313338;
             --bg-sidebar: #2b2d31;
-            --bg-chat: #313338;
-            --bg-input: #383a40;
+            --bg-servers: #1e1f22;
             --accent: #5865f2;
             --text-main: #dbdee1;
             --text-muted: #949ba4;
         }
 
-        body {
-            margin: 0;
-            font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: var(--bg-chat);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            overflow: hidden;
-        }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Discord Tasarım Çizgileri */
+        .servers { width: 72px; background: var(--bg-servers); display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 10px; }
+        .server-circle { width: 48px; height: 48px; background: var(--bg-main); border-radius: 50%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .server-circle:hover { border-radius: 15px; background: var(--accent); color: white; }
 
-        /* Sunucu Sütunu */
-        .servers {
-            width: 72px;
-            background-color: var(--bg-darker);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 12px 0;
-            gap: 8px;
-        }
+        .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; padding: 15px; }
+        .channel { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); margin-bottom: 5px; }
+        .channel:hover, .active-ch { background: #3f4147; color: white; }
 
-        .server-icon {
-            width: 48px;
-            height: 48px;
-            background-color: var(--bg-chat);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
+        .chat { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .header { height: 50px; border-bottom: 1px solid #26272b; display: flex; align-items: center; padding: 0 20px; font-weight: bold; }
 
-        .server-icon:hover {
-            border-radius: 15px;
-            background-color: var(--accent);
-        }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .msg-box { display: flex; flex-direction: column; border-bottom: 1px solid #3f4147; padding-bottom: 10px; }
+        .msg-user { color: #f2f3f5; font-weight: bold; font-size: 14px; margin-bottom: 3px; }
+        .msg-content { font-size: 15px; color: var(--text-main); }
 
-        /* Kanal Sütunu */
-        .channels {
-            width: 240px;
-            background-color: var(--bg-sidebar);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .channels-header {
-            padding: 15px;
-            font-weight: bold;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-            height: 20px;
-        }
-
-        .channel-list {
-            padding: 10px;
-            flex: 1;
-        }
-
-        .channel-item {
-            padding: 8px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            color: var(--text-muted);
-            margin-bottom: 2px;
-            display: flex;
-            align-items: center;
-        }
-
-        .channel-item:hover {
-            background-color: rgba(78, 80, 88, 0.3);
-            color: var(--text-main);
-        }
-
-        .channel-item.active {
-            background-color: rgba(78, 80, 88, 0.6);
-            color: white;
-        }
-
-        /* Mesaj Alanı */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            height: 50px;
-            display: flex;
-            align-items: center;
-            padding: 0 16px;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-            font-weight: bold;
-        }
-
-        #messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .message-block {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .msg-author {
-            color: white;
-            font-weight: 500;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-
-        .msg-text {
-            color: var(--text-main);
-            font-size: 15px;
-            line-height: 1.3;
-        }
-
-        /* Giriş Kutusu */
-        .input-area {
-            padding: 0 20px 24px 20px;
-        }
-
-        .input-wrapper {
-            background-color: var(--bg-input);
-            border-radius: 8px;
-            padding: 10px 16px;
-            display: flex;
-        }
-
-        input {
-            background: transparent;
-            border: none;
-            color: white;
-            width: 100%;
-            outline: none;
-            font-size: 15px;
-        }
+        .input-box { padding: 20px; }
+        .input-wrap { background: #383a40; border-radius: 8px; padding: 10px 15px; }
+        input { width: 100%; background: transparent; border: none; color: white; outline: none; font-size: 15px; }
     </style>
 </head>
 <body>
 
-    <nav class="servers">
-        <div class="server-icon" style="background-color: var(--accent);">🏠</div>
-        <div class="server-icon">G</div>
-        <div class="server-icon">O</div>
-    </nav>
+<div class="servers">
+    <div class="server-circle" style="background: var(--accent); color: white;">Y</div>
+    <div class="server-circle">+</div>
+</div>
 
-    <aside class="channels">
-        <div class="channels-header">Yavuz'un Sunucusu</div>
-        <div class="channel-list">
-            <div class="channel-item active"># genel</div>
-            <div class="channel-item"># oyun-grubu</div>
-            <div class="channel-item"># dersler</div>
+<div class="sidebar">
+    <h3 style="font-size: 16px;">Sohbet Kanalları</h3>
+    <div class="channel active-ch"># genel</div>
+    <div class="channel"># oyun-tayfası</div>
+    <div class="channel"># proje-kodları</div>
+</div>
+
+<div class="chat">
+    <div class="header"># genel</div>
+    <div id="messages"></div>
+    <div class="input-box">
+        <div class="input-wrap">
+            <input type="text" id="chatInput" placeholder="#genel kanalına mesaj gönder">
         </div>
-    </aside>
+    </div>
+</div>
 
-    <main class="chat-container">
-        <div class="chat-header"># genel</div>
-        <div id="messages">
-            <div class="message-block">
-                <div class="msg-author">Sistem</div>
-                <div class="msg-text">Hoş geldin! Firebase ayarlarını yapana kadar mesajlar sadece senin ekranında kalır.</div>
-            </div>
-        </div>
-        <div class="input-area">
-            <div class="input-wrapper">
-                <input type="text" id="chatInput" placeholder="#genel kanalına mesaj gönder">
-            </div>
-        </div>
-    </main>
+<script>
+    // 1. SUPABASE AYARLARI (Kendi bilgilerini buraya gir)
+    const SUPABASE_URL = 'https://PROJE_ID.supabase.co';
+    const SUPABASE_KEY = 'EY...ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    const input = document.getElementById('chatInput');
+    const msgContainer = document.getElementById('messages');
+    const myUser = "Yavuz_" + Math.floor(Math.random() * 100);
 
-        // --- BURAYA KENDİ FİREBASE BİLGİLERİNİ YAPIŞTIR ---
-        const firebaseConfig = {
-            apiKey: "SENIN_KEYIN",
-            authDomain: "PROJE.firebaseapp.com",
-            databaseURL: "https://PROJE.firebaseio.com",
-            projectId: "PROJE-ID",
-            storageBucket: "PROJE.appspot.com",
-            messagingSenderId: "ID",
-            appId: "APP_ID"
-        };
+    // 2. MESAJLARI ÇEKME VE EKRANA YAZMA
+    async function fetchMessages() {
+        let { data: messages } = await supabase.from('messages').select('*').order('id', { ascending: true });
+        msgContainer.innerHTML = '';
+        messages.forEach(m => renderMessage(m));
+    }
 
-        // Firebase Başlatma (Hataları önlemek için kontrol ekliyoruz)
-        let msgRef;
-        try {
-            const app = initializeApp(firebaseConfig);
-            const database = getDatabase(app);
-            msgRef = ref(database, 'messages');
-        } catch (e) {
-            console.log("Firebase henüz bağlı değil. Sadece yerel çalışıyor.");
+    function renderMessage(msg) {
+        const div = document.createElement('div');
+        div.className = 'msg-box';
+        div.innerHTML = `<div class="msg-user">${msg.user}</div><div class="msg-content">${msg.text}</div>`;
+        msgContainer.appendChild(div);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+
+    // 3. MESAJ GÖNDERME
+    input.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && input.value.trim() !== "") {
+            const val = input.value;
+            input.value = "";
+            await supabase.from('messages').insert([{ user: myUser, text: val }]);
         }
+    });
 
-        const input = document.getElementById('chatInput');
-        const msgContainer = document.getElementById('messages');
-        const username = "Kullanıcı_" + Math.floor(Math.random() * 999);
+    // 4. ANLIK DİNLEME (REALTIME)
+    supabase.channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            renderMessage(payload.new);
+        })
+        .subscribe();
 
-        // Mesaj Gönderme
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && input.value.trim() !== "") {
-                const text = input.value;
-                
-                if (msgRef) {
-                    // Firebase varsa oraya gönder
-                    push(msgRef, { user: username, text: text });
-                } else {
-                    // Firebase yoksa sadece yerel ekrana bas (Test için)
-                    renderMessage(username, text);
-                }
-                input.value = "";
-            }
-        });
+    // Başlangıçta eski mesajları getir
+    fetchMessages();
+</script>
 
-        // Ekrana Mesaj Basma Fonksiyonu
-        function renderMessage(user, text) {
-            const div = document.createElement('div');
-            div.className = 'message-block';
-            div.innerHTML = `
-                <div class="msg-author">${user}</div>
-                <div class="msg-text">${text}</div>
-            `;
-            msgContainer.appendChild(div);
-            msgContainer.scrollTop = msgContainer.scrollHeight;
-        }
-
-        // Firebase'den Mesajları Dinle
-        if (msgRef) {
-            onChildAdded(msgRef, (snapshot) => {
-                const data = snapshot.val();
-                renderMessage(data.user, data.text);
-            });
-        }
-    </script>
 </body>
 </html>
