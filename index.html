@@ -2,78 +2,68 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>ChatApp | Gun.js Fix</title>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <title>Yavuz Chat | Ultra Fast</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #313338; --sidebar: #2b2d31; --accent: #5865f2; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; height: 100vh; display: flex; }
-        .sidebar { width: 240px; background: var(--sidebar); padding: 20px; }
-        .chat { flex: 1; display: flex; flex-direction: column; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { background: #383a40; padding: 10px; border-radius: 8px; width: fit-content; border-left: 4px solid var(--accent); }
-        .user { color: var(--accent); font-weight: bold; font-size: 12px; margin-bottom: 4px; }
-        .input-area { padding: 20px; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #383a40; color: white; outline: none; box-sizing: border-box; }
+        body { margin: 0; background: #313338; color: white; font-family: sans-serif; display: flex; height: 100vh; }
+        .sidebar { width: 200px; background: #2b2d31; padding: 20px; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        #msg-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #383a40; padding: 10px; border-radius: 5px; }
+        .u { color: #5865f2; font-weight: bold; font-size: 12px; }
+        .input-box { padding: 20px; }
+        input { width: 100%; padding: 15px; background: #383a40; border: none; color: white; border-radius: 8px; outline: none; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h3>Discord-Clone</h3>
-        <p style="color: #949ba4;"># genel</p>
+<div class="sidebar"><h3>Sunucu</h3><p>#genel</p></div>
+<div class="main">
+    <div id="msg-area"></div>
+    <div class="input-box">
+        <input type="text" id="inp" placeholder="Mesajı buraya yaz...">
     </div>
+</div>
 
-    <div class="chat">
-        <div id="messages"></div>
-        <div class="input-area">
-            <input type="text" id="input" placeholder="Mesaj yaz ve Enter'a bas...">
-        </div>
-    </div>
+<script>
+    // SUPABASE BİLGİLERİNİ BURAYA YAPIŞTIR
+    const S_URL = 'SENİN_URLİN'; 
+    const S_KEY = 'SENİN_ANON_KEYİN';
+    const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
-    <script>
-        // Daha fazla ve güncel relay sunucusu ekledik (Biri çalışmazsa diğeri çalışır)
-        const gun = Gun([
-            'https://gun-manhattan.herokuapp.com/gun',
-            'https://gun-ams1.marda.it/gun',
-            'https://peer.wall.org/gun'
-        ]);
+    const area = document.getElementById('msg-area');
+    const inp = document.getElementById('inp');
+    const user = "User_" + Math.floor(Math.random() * 99);
 
-        // Buradaki ismi KENDİNE ÖZEL yap (örn: 'yavuzun-odasi-2026')
-        // Eğer başkasıyla aynı yaparsan mesajlar karışır!
-        const chat = gun.get('yavuzun-deneme-odasi-7788').get('messages');
+    // Mesaj Gönder
+    inp.onkeydown = async (e) => {
+        if(e.key === 'Enter' && inp.value !== "") {
+            const txt = inp.value;
+            inp.value = "";
+            await supabaseClient.from('messages').insert([{ user: user, text: txt }]);
+        }
+    }
 
-        const input = document.getElementById('input');
-        const msgDiv = document.getElementById('messages');
-        const myUser = "Kullanıcı_" + Math.floor(Math.random() * 1000);
+    // Mesajları Ekrana Bas
+    function addMsg(m) {
+        const d = document.createElement('div');
+        d.className = 'msg';
+        d.innerHTML = `<div class="u">${m.user}</div><div>${m.text}</div>`;
+        area.appendChild(d);
+        area.scrollTop = area.scrollHeight;
+    }
 
-        // Mesaj Gönder
-        input.onkeydown = (e) => {
-            if (e.key === 'Enter' && input.value.trim() !== "") {
-                const messageData = {
-                    user: myUser,
-                    text: input.value,
-                    time: Date.now()
-                };
-                chat.set(messageData); // Veriyi Gun.js ağına gönderir
-                input.value = "";
-            }
-        };
+    // Anlık İzle (Bu kısım tıklanma sorunu yapmaz)
+    supabaseClient.channel('any').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        addMsg(payload.new);
+    }).subscribe();
 
-        // Mesajları Dinle ve Ekrana Bas
-        chat.map().on((data, id) => {
-            if (data && data.text) {
-                // Aynı mesajın tekrar eklenmesini önlemek için basit kontrol
-                const existing = document.getElementById(id);
-                if (!existing) {
-                    const div = document.createElement('div');
-                    div.id = id;
-                    div.className = 'msg';
-                    div.innerHTML = `<div class="user">${data.user}</div><div>${data.text}</div>`;
-                    msgDiv.appendChild(div);
-                    msgDiv.scrollTop = msgDiv.scrollHeight;
-                }
-            }
-        });
-    </script>
+    // Sayfa açılınca eski mesajları yükle
+    async function load() {
+        const { data } = await supabaseClient.from('messages').select('*');
+        if(data) data.forEach(addMsg);
+    }
+    load();
+</script>
 </body>
 </html>
