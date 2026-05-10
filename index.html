@@ -1,69 +1,505 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Yavuz Chat | Ultra Fast</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { margin: 0; background: #313338; color: white; font-family: sans-serif; display: flex; height: 100vh; }
-        .sidebar { width: 200px; background: #2b2d31; padding: 20px; }
-        .main { flex: 1; display: flex; flex-direction: column; }
-        #msg-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { background: #383a40; padding: 10px; border-radius: 5px; }
-        .u { color: #5865f2; font-weight: bold; font-size: 12px; }
-        .input-box { padding: 20px; }
-        input { width: 100%; padding: 15px; background: #383a40; border: none; color: white; border-radius: 8px; outline: none; box-sizing: border-box; }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>J.A.R.V.I.S — v5.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#020a10;font-family:'Rajdhani',sans-serif;color:#c8f0ff;min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.006) 2px,rgba(0,212,255,0.006) 4px);pointer-events:none;z-index:999;}
+.corner{position:fixed;width:36px;height:36px;opacity:0.2;pointer-events:none;z-index:998;}
+.corner-tl{top:10px;left:10px;border-top:1px solid #00d4ff;border-left:1px solid #00d4ff;}
+.corner-tr{top:10px;right:10px;border-top:1px solid #00d4ff;border-right:1px solid #00d4ff;}
+.corner-bl{bottom:10px;left:10px;border-bottom:1px solid #00d4ff;border-left:1px solid #00d4ff;}
+.corner-br{bottom:10px;right:10px;border-bottom:1px solid #00d4ff;border-right:1px solid #00d4ff;}
+#hexCanvas{position:fixed;top:0;left:0;width:100%;height:100%;opacity:0.5;pointer-events:none;z-index:0;}
+.root{min-height:100vh;display:flex;flex-direction:column;max-width:920px;margin:0 auto;padding:0 16px 24px;position:relative;z-index:1;}
+
+.header{display:flex;align-items:center;gap:14px;padding:18px 0 10px;border-bottom:1px solid rgba(0,212,255,0.15);}
+.header-title h1{font-size:2rem;font-weight:700;letter-spacing:0.3em;color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5),0 0 50px rgba(0,212,255,0.12);line-height:1;}
+.header-title p{font-family:'Share Tech Mono',monospace;font-size:0.56rem;color:rgba(0,212,255,0.4);letter-spacing:0.18em;margin-top:3px;}
+.badges{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+.badge{font-family:'Share Tech Mono',monospace;font-size:0.5rem;padding:2px 6px;border:1px solid rgba(0,212,255,0.18);color:rgba(0,212,255,0.4);border-radius:1px;}
+.badge.g{border-color:rgba(0,255,136,0.3);color:rgba(0,255,136,0.5);}
+.badge.v{border-color:rgba(255,165,0,0.3);color:rgba(255,165,0,0.5);}
+
+.orb-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;}
+.orb-wrap{position:relative;width:68px;height:68px;display:flex;align-items:center;justify-content:center;}
+.orb-ring{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,0.25);animation:orbP 3s ease-out infinite;}
+.r1{width:68px;height:68px;}.r2{width:52px;height:52px;animation-delay:.5s;}.r3{width:38px;height:38px;animation-delay:1s;}
+@keyframes orbP{0%{transform:scale(.93);opacity:.8}50%{transform:scale(1.08);opacity:.2}100%{transform:scale(.93);opacity:.8}}
+.orb-svg{position:absolute;animation:orbS 10s linear infinite;}
+@keyframes orbS{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.orb-lbl{font-family:'Share Tech Mono',monospace;font-size:.48rem;letter-spacing:.1em;color:rgba(0,212,255,.4);}
+.orb-wrap.listening .orb-ring{border-color:rgba(0,255,136,.6)!important;animation-duration:.7s;}
+.orb-wrap.thinking .orb-ring{border-color:rgba(255,165,0,.5)!important;animation-duration:1.2s;}
+.orb-wrap.speaking .orb-ring{border-color:rgba(0,212,255,.7)!important;animation-duration:.9s;}
+
+.status-bar{display:flex;align-items:center;gap:12px;padding:6px 0;font-family:'Share Tech Mono',monospace;font-size:.57rem;color:rgba(0,212,255,.38);border-bottom:1px solid rgba(0,212,255,.07);flex-wrap:wrap;}
+.sl{color:rgba(0,212,255,.22);}.sv{color:rgba(0,212,255,.55);}
+.status-right{display:flex;align-items:center;gap:6px;margin-left:auto;color:#00d4ff;}
+.dot{width:5px;height:5px;border-radius:50%;background:#00d4ff;box-shadow:0 0 6px #00d4ff;animation:blink 1.5s infinite;display:inline-block;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+
+.key-panel{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.15);border-radius:2px;margin:8px 0 0;}
+.key-panel input{flex:1;background:transparent;border:none;border-bottom:1px solid rgba(0,255,136,0.25);color:#c8f0ff;font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:3px 0;outline:none;letter-spacing:.05em;}
+.key-panel input::placeholder{color:rgba(0,255,136,.25);}
+.key-save{font-family:'Share Tech Mono',monospace;font-size:.56rem;padding:4px 12px;border:1px solid rgba(0,255,136,.25);background:rgba(0,255,136,.05);color:rgba(0,255,136,.65);cursor:pointer;border-radius:2px;transition:all .2s;white-space:nowrap;}
+.key-save:hover{background:rgba(0,255,136,.12);color:#00ff88;}
+.key-hint{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:rgba(0,255,136,.35);margin-top:3px;}
+
+.voice-panel{display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.1);border-radius:2px;margin:8px 0 0;}
+.vbtn{font-family:'Share Tech Mono',monospace;font-size:.58rem;padding:5px 14px;border-radius:2px;cursor:pointer;letter-spacing:.1em;transition:all .2s;flex-shrink:0;}
+.vbtn.off{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.22);color:rgba(0,212,255,.5);}
+.vbtn.on{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.4);color:#00ff88;animation:vpulse 2s infinite;}
+@keyframes vpulse{0%,100%{box-shadow:0 0 0 rgba(0,255,136,0)}50%{box-shadow:0 0 12px rgba(0,255,136,.22)}}
+.vinfo{flex:1;}
+.vhint{font-family:'Share Tech Mono',monospace;font-size:.54rem;color:rgba(0,212,255,.3);}
+.vhint span{color:rgba(0,255,136,.65);font-weight:700;}
+.vstat{font-family:'Share Tech Mono',monospace;font-size:.52rem;margin-top:2px;color:rgba(0,212,255,.28);}
+.vstat.on{color:#00ff88;}.vstat.proc{color:#ffa500;}
+.waveform{display:flex;align-items:center;gap:2px;height:22px;}
+.wf-bar{width:3px;height:4px;background:rgba(0,255,136,.25);border-radius:1px;}
+.waveform.active .wf-bar{animation:wfA .5s ease-in-out infinite alternate;}
+@keyframes wfA{from{height:3px;background:rgba(0,255,136,.25)}to{height:20px;background:#00ff88}}
+#tBox{font-family:'Share Tech Mono',monospace;font-size:.58rem;color:#00ff88;padding:3px 8px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:1px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
+
+.chat-area{flex:1;overflow-y:auto;padding:14px 0;display:flex;flex-direction:column;gap:12px;min-height:240px;max-height:42vh;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,.12) transparent;}
+.chat-area::-webkit-scrollbar{width:3px;}.chat-area::-webkit-scrollbar-thumb{background:rgba(0,212,255,.12);border-radius:2px;}
+.msg{display:flex;gap:10px;animation:fadeUp .25s ease;}
+.msg.user{flex-direction:row-reverse;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.avatar{width:30px;height:30px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:.52rem;font-weight:700;flex-shrink:0;margin-top:2px;}
+.avatar.a{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);color:#00d4ff;}
+.avatar.u{background:rgba(255,165,0,.08);border:1px solid rgba(255,165,0,.25);color:#ffa500;}
+.bubble{max-width:82%;padding:10px 14px;border-radius:2px;font-size:.93rem;line-height:1.65;}
+.bubble.a{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-left:2px solid rgba(0,212,255,.4);color:#c8f0ff;}
+.bubble.u{background:rgba(255,165,0,.04);border:1px solid rgba(255,165,0,.12);border-right:2px solid rgba(255,165,0,.4);color:#ffe8c0;}
+.cursor::after{content:'▌';color:#00d4ff;animation:cur .7s infinite;}
+@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+
+.md-h1{font-size:1.1rem;font-weight:700;color:#00d4ff;margin:8px 0 3px;}
+.md-h2{font-size:1rem;font-weight:600;color:#7ae8ff;margin:6px 0 2px;}
+.md-h3{font-size:.94rem;font-weight:600;color:#a0e4ff;margin:5px 0 2px;}
+.md-p{margin:2px 0;}.md-br{height:5px;}
+.md-b{color:#00d4ff;font-weight:700;}
+.md-c{font-family:'Share Tech Mono',monospace;font-size:.79rem;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);padding:1px 5px;border-radius:2px;color:#7ae8ff;}
+.md-li{padding-left:14px;margin:2px 0;position:relative;}
+.md-li::before{content:'⟩';position:absolute;left:0;color:rgba(0,212,255,.5);font-size:.8rem;}
+.code-block{background:#010d14;border:1px solid rgba(0,212,255,.18);border-radius:3px;margin:8px 0;overflow:hidden;}
+.code-hdr{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:rgba(0,212,255,.05);border-bottom:1px solid rgba(0,212,255,.1);}
+.code-lang{font-family:'Share Tech Mono',monospace;font-size:.54rem;color:rgba(0,212,255,.45);letter-spacing:.1em;}
+.copy-btn{font-family:'Share Tech Mono',monospace;font-size:.52rem;background:transparent;border:1px solid rgba(0,212,255,.22);color:rgba(0,212,255,.45);padding:2px 8px;cursor:pointer;border-radius:1px;}
+.copy-btn:hover{background:rgba(0,212,255,.1);color:#00d4ff;}
+.code-block pre{padding:12px 14px;overflow-x:auto;}
+.code-block code{font-family:'Share Tech Mono',monospace;font-size:.77rem;color:#7ae8ff;line-height:1.6;}
+
+.quick-lbl{font-family:'Share Tech Mono',monospace;font-size:.52rem;color:rgba(0,212,255,.28);letter-spacing:.15em;padding:8px 0 4px;}
+.quick-cmds{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:8px;}
+.qbtn{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.16);color:rgba(0,212,255,.6);padding:5px 11px;font-family:'Rajdhani',sans-serif;font-size:.75rem;font-weight:500;cursor:pointer;border-radius:2px;transition:all .18s;}
+.qbtn:hover{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.4);color:#00d4ff;}
+
+.input-area{display:flex;gap:9px;align-items:flex-end;padding-top:8px;border-top:1px solid rgba(0,212,255,.08);}
+.input-lbl{font-family:'Share Tech Mono',monospace;font-size:.53rem;color:rgba(0,212,255,.28);letter-spacing:.15em;margin-bottom:4px;}
+textarea{width:100%;background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.16);border-bottom:2px solid rgba(0,212,255,.3);color:#c8f0ff;font-family:'Rajdhani',sans-serif;font-size:.95rem;padding:9px 13px;resize:none;outline:none;border-radius:2px;transition:all .18s;min-height:46px;max-height:120px;}
+textarea::placeholder{color:rgba(0,212,255,.18);}
+textarea:focus{border-color:rgba(0,212,255,.4);border-bottom-color:#00d4ff;background:rgba(0,212,255,.055);}
+.send-btn{background:transparent;border:1px solid rgba(0,212,255,.3);color:#00d4ff;width:46px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:2px;transition:all .18s;flex-shrink:0;}
+.send-btn:hover:not(:disabled){background:rgba(0,212,255,.1);border-color:#00d4ff;box-shadow:0 0 12px rgba(0,212,255,.15);}
+.send-btn:disabled{opacity:.22;cursor:not-allowed;}
+</style>
 </head>
 <body>
+<div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div><div class="corner corner-br"></div>
+<canvas id="hexCanvas"></canvas>
 
-<div class="sidebar"><h3>Sunucu</h3><p>#genel</p></div>
-<div class="main">
-    <div id="msg-area"></div>
-    <div class="input-box">
-        <input type="text" id="inp" placeholder="Mesajı buraya yaz...">
+<div class="root">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="orb-col">
+      <div class="orb-wrap" id="orb">
+        <div class="orb-ring r1"></div><div class="orb-ring r2"></div><div class="orb-ring r3"></div>
+        <div class="orb-svg">
+          <svg viewBox="0 0 60 60" width="54" height="54">
+            <circle cx="30" cy="30" r="20" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.5"/>
+            <circle cx="30" cy="30" r="12" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.85"/>
+            <circle cx="30" cy="30" r="5" fill="#00d4ff" opacity="0.95"/>
+            <line x1="30" y1="10" x2="30" y2="50" stroke="#00d4ff" stroke-width="0.4" opacity="0.28"/>
+            <line x1="10" y1="30" x2="50" y2="30" stroke="#00d4ff" stroke-width="0.4" opacity="0.28"/>
+          </svg>
+        </div>
+      </div>
+      <div class="orb-lbl" id="orbLbl">HAZIR</div>
     </div>
+    <div class="header-title">
+      <h1>J.A.R.V.I.S</h1>
+      <p>JUST A RATHER VERY INTELLIGENT SYSTEM — v5.0.0</p>
+      <div class="badges">
+        <span class="badge">KOD</span><span class="badge">MATEMATİK</span>
+        <span class="badge">ANALİZ</span><span class="badge">YAZARLIK</span><span class="badge">EĞİTİM</span>
+        <span class="badge g">⚡ GROQ</span>
+        <span class="badge v">🎙 SES AKTİVASYON</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar">
+    <span><span class="sl">MDL </span><span class="sv" id="modelName">LLAMA-3.3-70B</span></span>
+    <span><span class="sl">PROVIDER </span><span class="sv">GROQ</span></span>
+    <span><span class="sl">LANG </span><span class="sv">ALL</span></span>
+    <div class="status-right"><span class="dot"></span><span id="statusTxt" style="font-family:'Share Tech Mono',monospace;font-size:.57rem;letter-spacing:.1em;">HAZIR</span></div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="key-panel">
+    <div style="flex:1">
+      <input type="password" id="keyInput" placeholder="gsk_... Groq API key'inizi girin"/>
+      <div class="key-hint">→ console.groq.com → API Keys → Create API Key (ücretsiz)</div>
+    </div>
+    <button class="key-save" onclick="saveKey()">💾 KAYDET</button>
+  </div>
+
+  <!-- VOICE -->
+  <div class="voice-panel">
+    <button class="vbtn off" id="vBtn" onclick="toggleVoice()">🎙 AKTİF ET</button>
+    <div class="vinfo">
+      <div class="vhint" id="vHint">Sesli komut için mikrofonu aktif edin</div>
+      <div class="vstat" id="vStat">MİK KAPALI</div>
+    </div>
+    <div class="waveform" id="wave">
+      <div class="wf-bar" style="animation-delay:0s"></div><div class="wf-bar" style="animation-delay:.07s"></div>
+      <div class="wf-bar" style="animation-delay:.14s"></div><div class="wf-bar" style="animation-delay:.21s"></div>
+      <div class="wf-bar" style="animation-delay:.28s"></div><div class="wf-bar" style="animation-delay:.35s"></div>
+      <div class="wf-bar" style="animation-delay:.42s"></div><div class="wf-bar" style="animation-delay:.49s"></div>
+    </div>
+    <div id="tBox"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area" id="chat"></div>
+
+  <!-- QUICK -->
+  <div id="quickSec">
+    <div class="quick-lbl">// HIZLI KOMUTLAR</div>
+    <div class="quick-cmds">
+      <button class="qbtn" onclick="qs('Bugünün önemli haberleri neler?')">◈ Bugünün haberleri</button>
+      <button class="qbtn" onclick="qs('Python ile faktöriyel fonksiyonu yaz')">⟨/⟩ Python faktöriyel</button>
+      <button class="qbtn" onclick="qs('Dolar ve euro kuru ne kadar?')">◆ Döviz kuru</button>
+      <button class="qbtn" onclick="qs('Einstein kimdir ve ne keşfetti?')">✦ Einstein'ı anlat</button>
+      <button class="qbtn" onclick="qs('İngilizce\'ye çevir: Merhaba dünya')">⇌ İngilizce'ye çevir</button>
+      <button class="qbtn" onclick="qs('Kendini ve tüm yeteneklerini tanıt')">◉ Kendini tanıt</button>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <div style="flex:1">
+      <div class="input-lbl">// KOMUT GİRİŞİ — SHIFT+ENTER YENİ SATIR</div>
+      <textarea id="inp" rows="1" placeholder="Soru sor, kod yaz, çeviri yap..." onkeydown="hk(event)"></textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="send()" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <script>
-    // SUPABASE BİLGİLERİNİ BURAYA YAPIŞTIR
-    const S_URL = 'SENİN_URLİN'; 
-    const S_KEY = 'SENİN_ANON_KEYİN';
-    const supabaseClient = supabase.createClient(S_URL, S_KEY);
-
-    const area = document.getElementById('msg-area');
-    const inp = document.getElementById('inp');
-    const user = "User_" + Math.floor(Math.random() * 99);
-
-    // Mesaj Gönder
-    inp.onkeydown = async (e) => {
-        if(e.key === 'Enter' && inp.value !== "") {
-            const txt = inp.value;
-            inp.value = "";
-            await supabaseClient.from('messages').insert([{ user: user, text: txt }]);
-        }
+// ── Hex bg ───────────────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('hexCanvas'),ctx=c.getContext('2d');
+  function d(){
+    c.width=window.innerWidth;c.height=window.innerHeight;
+    ctx.clearRect(0,0,c.width,c.height);
+    const s=26;ctx.strokeStyle='rgba(0,212,255,0.07)';ctx.lineWidth=0.8;
+    const rows=Math.ceil(c.height/(s*1.55))+2,cols=Math.ceil(c.width/(s*1.75))+2;
+    for(let r=0;r<rows;r++)for(let cl=0;cl<cols;cl++){
+      const x=cl*s*1.75+(r%2)*s*0.875,y=r*s*1.52;
+      ctx.beginPath();
+      for(let i=0;i<6;i++){
+        const a=(Math.PI/180)*(60*i-30);
+        i===0?ctx.moveTo(x+s*Math.cos(a),y+s*Math.sin(a)):ctx.lineTo(x+s*Math.cos(a),y+s*Math.sin(a));
+      }
+      ctx.closePath();ctx.stroke();
     }
+  }
+  d();window.addEventListener('resize',d);
+})();
 
-    // Mesajları Ekrana Bas
-    function addMsg(m) {
-        const d = document.createElement('div');
-        d.className = 'msg';
-        d.innerHTML = `<div class="u">${m.user}</div><div>${m.text}</div>`;
-        area.appendChild(d);
-        area.scrollTop = area.scrollHeight;
+// ── Config ───────────────────────────────────────────────────────
+const GROQ_URL='https://api.groq.com/openai/v1/chat/completions';
+const MODEL='llama-3.3-70b-versatile';
+
+const SYSTEM=`Sen JARVIS'sin — Just A Rather Very Intelligent System. Tony Stark'ın yapay zeka asistanı.
+KİŞİLİK: Kibarca ama esprili, özgüvenli. Kullanıcıya "Efendim" de. Asla "Bir yapay zeka olarak..." deme.
+Ara sıra "Analiz tamamlandı.", "Sistemler nominal.", "Tarama tamamlandı." gibi ifadeler kullan.
+TAM YETKİNLİKLER — HİÇBİR SORUYU GERİ ÇEVİRME:
+Matematik, kod (her dil), hata ayıklama, yaratıcı yazarlık, çeviri, analiz, strateji, eğitim, kişisel tavsiye, genel bilgi.
+FORMAT: Kod için \`\`\`dil...\`\`\` kullan. Listeler için - veya 1. 2. 3. Önemli şeyler **kalın**. Kullanıcı hangi dilde yazıyorsa o dilde yanıt ver.`;
+
+let msgs=[{role:'system',content:SYSTEM}];
+let loading=false;
+let apiKey=localStorage.getItem('jarvis_groq_key')||'';
+let voiceOn=false,wakeRec=null,cmdRec=null,isListening=false;
+
+if(apiKey)document.getElementById('keyInput').value=apiKey;
+
+function saveKey(){
+  const k=document.getElementById('keyInput').value.trim();
+  if(!k){alert('Lütfen Groq API key girin.');return;}
+  apiKey=k;
+  localStorage.setItem('jarvis_groq_key',k);
+  const btn=document.querySelector('.key-save');
+  btn.textContent='✓ KAYDEDİLDİ';
+  setTimeout(()=>btn.textContent='💾 KAYDET',2000);
+}
+
+// ── Markdown ─────────────────────────────────────────────────────
+function renderMD(text,el){
+  el.innerHTML='';
+  const lines=text.split('\n');
+  let codeBlock=false,codeLang='',codeLines=[];
+  function flush(){
+    if(!codeLines.length)return;
+    const src=codeLines.join('\n');
+    const block=document.createElement('div');block.className='code-block';
+    const hdr=document.createElement('div');hdr.className='code-hdr';
+    const lbl=document.createElement('span');lbl.className='code-lang';lbl.textContent=codeLang||'CODE';
+    const btn=document.createElement('button');btn.className='copy-btn';btn.textContent='KOPYALA';
+    btn.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(src);btn.textContent='✓';setTimeout(()=>btn.textContent='KOPYALA',1500);};
+    hdr.appendChild(lbl);hdr.appendChild(btn);block.appendChild(hdr);
+    const pre=document.createElement('pre');const code=document.createElement('code');
+    code.textContent=src;pre.appendChild(code);block.appendChild(pre);el.appendChild(block);
+    codeLines=[];codeLang='';
+  }
+  function inl(raw){
+    const span=document.createElement('span');
+    const re=/(\*\*(.+?)\*\*|`(.+?)`)/g;
+    let last=0,m;
+    while((m=re.exec(raw))!==null){
+      if(m.index>last)span.appendChild(document.createTextNode(raw.slice(last,m.index)));
+      if(m[2]){const b=document.createElement('strong');b.className='md-b';b.textContent=m[2];span.appendChild(b);}
+      else if(m[3]){const c=document.createElement('code');c.className='md-c';c.textContent=m[3];span.appendChild(c);}
+      last=m.index+m[0].length;
     }
+    if(last<raw.length)span.appendChild(document.createTextNode(raw.slice(last)));
+    return span;
+  }
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];
+    if(l.startsWith('```')){if(codeBlock){flush();codeBlock=false;}else{codeBlock=true;codeLang=l.slice(3).trim().toUpperCase();}continue;}
+    if(codeBlock){codeLines.push(l);continue;}
+    let e;
+    if(l.startsWith('### ')){e=document.createElement('h3');e.className='md-h3';e.appendChild(inl(l.slice(4)));}
+    else if(l.startsWith('## ')){e=document.createElement('h2');e.className='md-h2';e.appendChild(inl(l.slice(3)));}
+    else if(l.startsWith('# ')){e=document.createElement('h1');e.className='md-h1';e.appendChild(inl(l.slice(2)));}
+    else if(l.match(/^\d+\.\s/)){e=document.createElement('div');e.className='md-li';e.appendChild(inl(l));}
+    else if(l.startsWith('- ')||l.startsWith('* ')){e=document.createElement('div');e.className='md-li';e.appendChild(inl(l.slice(2)));}
+    else if(l.trim()===''){e=document.createElement('div');e.className='md-br';}
+    else{e=document.createElement('p');e.className='md-p';e.appendChild(inl(l));}
+    el.appendChild(e);
+  }
+  if(codeBlock)flush();
+}
 
-    // Anlık İzle (Bu kısım tıklanma sorunu yapmaz)
-    supabaseClient.channel('any').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        addMsg(payload.new);
-    }).subscribe();
+function setOrb(s){
+  document.getElementById('orb').className='orb-wrap'+(s!=='idle'?' '+s:'');
+  const L={idle:'HAZIR',listening:'DİNLİYOR',thinking:'DÜŞÜNÜYOR',speaking:'KONUŞUYOR'};
+  document.getElementById('orbLbl').textContent=L[s]||'HAZIR';
+}
+function setSt(t){document.getElementById('statusTxt').textContent=t;}
 
-    // Sayfa açılınca eski mesajları yükle
-    async function load() {
-        const { data } = await supabaseClient.from('messages').select('*');
-        if(data) data.forEach(addMsg);
+function addBubble(role){
+  const chat=document.getElementById('chat');
+  const wrap=document.createElement('div');wrap.className='msg'+(role==='user'?' user':'');
+  const av=document.createElement('div');av.className='avatar '+(role==='assistant'?'a':'u');
+  av.textContent=role==='assistant'?'JAR':'SİZ';
+  const b=document.createElement('div');b.className='bubble '+(role==='assistant'?'a':'u');
+  wrap.appendChild(av);wrap.appendChild(b);chat.appendChild(wrap);
+  chat.scrollTop=99999;
+  return b;
+}
+
+function typewrite(bubble,text,onDone){
+  let i=0;
+  const speed=Math.max(4,Math.min(14,Math.floor(4000/text.length)));
+  const t=setInterval(()=>{
+    if(i<=text.length){
+      renderMD(text.slice(0,i),bubble);
+      bubble.classList.add('cursor');
+      document.getElementById('chat').scrollTop=99999;
+      i++;
+    }else{
+      clearInterval(t);
+      bubble.classList.remove('cursor');
+      onDone();
     }
-    load();
+  },speed);
+}
+
+// ── Send ─────────────────────────────────────────────────────────
+async function send(override){
+  const text=(override!==undefined?override:document.getElementById('inp').value).trim();
+  if(!text||loading)return;
+  if(!apiKey){
+    alert('Lütfen önce Groq API key\'inizi girin ve KAYDET butonuna basın.\n\nconsole.groq.com → API Keys → Create API Key (ücretsiz)');
+    document.getElementById('keyInput').focus();
+    return;
+  }
+  document.getElementById('inp').value='';
+  document.getElementById('sendBtn').disabled=true;
+  loading=true;
+  document.getElementById('quickSec').style.display='none';
+  setSt('İŞLENİYOR...');setOrb('thinking');
+
+  msgs.push({role:'user',content:text});
+  const ub=addBubble('user');ub.textContent=text;
+  const ab=addBubble('assistant');
+  ab.innerHTML='<span style="color:rgba(0,212,255,.3);font-family:\'Share Tech Mono\',monospace;font-size:.7rem;">⚡ işleniyor...</span>';
+
+  try{
+    const res=await fetch(GROQ_URL,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+apiKey
+      },
+      body:JSON.stringify({
+        model:MODEL,
+        messages:msgs,
+        max_tokens:4096,
+        temperature:0.7
+      })
+    });
+    const data=await res.json();
+    let reply='';
+    if(data.choices&&data.choices[0])reply=data.choices[0].message.content||'';
+    if(!reply&&data.error)reply='Hata: '+(data.error.message||JSON.stringify(data.error));
+    if(!reply)reply='Yanıt alınamadı, Efendim.';
+
+    msgs.push({role:'assistant',content:reply});
+    setOrb('speaking');setSt('YANIT VERİYOR...');
+    typewrite(ab,reply,()=>{
+      setSt('HAZIR');setOrb('idle');loading=false;
+      document.getElementById('sendBtn').disabled=!document.getElementById('inp').value.trim();
+    });
+  }catch(e){
+    ab.innerHTML='';
+    renderMD('**Bağlantı hatası:** '+e.message+'\n\nGroq API key\'inizi kontrol edin.',ab);
+    setSt('HATA');setOrb('idle');loading=false;
+  }
+}
+
+function qs(t){send(t);}
+function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+document.getElementById('inp').addEventListener('input',function(){
+  document.getElementById('sendBtn').disabled=!this.value.trim()||loading;
+});
+
+// ── Voice ────────────────────────────────────────────────────────
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('Ses tanıma sadece Google Chrome\'da çalışır.');return;}
+  if(voiceOn){
+    voiceOn=false;
+    try{wakeRec&&wakeRec.stop();}catch(e){}
+    try{cmdRec&&cmdRec.stop();}catch(e){}
+    isListening=false;
+    document.getElementById('vBtn').className='vbtn off';
+    document.getElementById('vBtn').textContent='🎙 AKTİF ET';
+    document.getElementById('vHint').innerHTML='Sesli komut için mikrofonu aktif edin';
+    document.getElementById('vStat').textContent='MİK KAPALI';
+    document.getElementById('vStat').className='vstat';
+    document.getElementById('wave').classList.remove('active');
+    document.getElementById('tBox').style.display='none';
+    setOrb('idle');
+  }else{
+    voiceOn=true;
+    document.getElementById('vBtn').className='vbtn on';
+    document.getElementById('vBtn').textContent='🎙 AKTİF';
+    document.getElementById('vHint').innerHTML='<span>"Hey JARVIS"</span> deyin, ardından komutunuzu söyleyin';
+    document.getElementById('vStat').textContent='UYANIYOR...';
+    document.getElementById('vStat').className='vstat';
+    startWake();
+  }
+}
+
+function startWake(){
+  if(!voiceOn)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();
+  rec.continuous=true;rec.interimResults=true;rec.lang='tr-TR';
+  rec.onresult=function(e){
+    const said=e.results[e.results.length-1][0].transcript.toLowerCase();
+    if(said.includes('hey jarvis')||said.includes('ey jarvis')||said.includes('hey jarwis')){
+      try{rec.stop();}catch(er){}
+      wakeRec=null;isListening=true;
+      document.getElementById('wave').classList.add('active');
+      document.getElementById('vStat').textContent='DİNLİYOR...';
+      document.getElementById('vStat').className='vstat on';
+      setOrb('listening');
+      setTimeout(startCmd,300);
+    }
+  };
+  rec.onend=function(){wakeRec=null;if(voiceOn&&!isListening)setTimeout(startWake,600);};
+  rec.onerror=function(){wakeRec=null;if(voiceOn&&!isListening)setTimeout(startWake,1000);};
+  wakeRec=rec;try{rec.start();}catch(e){}
+}
+
+function startCmd(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();
+  rec.continuous=false;rec.interimResults=true;rec.lang='tr-TR';
+  let final='';
+  rec.onresult=function(e){
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    const shown=final||interim;
+    const tb=document.getElementById('tBox');
+    if(shown){tb.style.display='block';tb.textContent='"'+shown+'"';}
+  };
+  rec.onend=function(){
+    isListening=false;cmdRec=null;
+    document.getElementById('wave').classList.remove('active');
+    document.getElementById('tBox').style.display='none';
+    if(final.trim()){
+      document.getElementById('vStat').textContent='İŞLENİYOR...';
+      document.getElementById('vStat').className='vstat proc';
+      send(final.trim());
+    }else{
+      document.getElementById('vStat').textContent='UYANIYOR...';
+      document.getElementById('vStat').className='vstat';
+      setOrb('idle');
+    }
+    final='';
+    if(voiceOn)setTimeout(startWake,800);
+  };
+  rec.onerror=function(){
+    isListening=false;cmdRec=null;
+    document.getElementById('wave').classList.remove('active');
+    document.getElementById('tBox').style.display='none';
+    document.getElementById('vStat').textContent='UYANIYOR...';
+    document.getElementById('vStat').className='vstat';
+    setOrb('idle');
+    if(voiceOn)setTimeout(startWake,800);
+  };
+  cmdRec=rec;try{rec.start();}catch(e){}
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+window.onload=function(){
+  const boot=`Sistemler aktif. **JARVIS v5.0** çevrimiçi. ⚡ Groq motoru yüklendi.\n\nHoş geldiniz, Efendim. Groq API key'inizi üstteki alana girin ve kaydedin — sonra her şey hazır.\n\n**"Hey JARVIS"** diyerek sesli komut da verebilirsiniz.\n\nNasıl yardımcı olabilirim?`;
+  const ab=addBubble('assistant');
+  typewrite(ab,boot,()=>{});
+};
 </script>
 </body>
 </html>
